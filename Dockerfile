@@ -9,7 +9,6 @@ RUN yarn install
 COPY . .
 
 RUN yarn prisma generate
-RUN yarn migrate:docker
 RUN yarn run build
 
 # Stage 2: Setup the runtime image
@@ -18,11 +17,11 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY --from=build /app/package.json ./
-COPY --from=build /app/package-lock.json ./
+COPY --from=build /app/yarn.lock ./
 RUN yarn install --only=prod
 
 COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+CMD yarn migrate:docker && yarn start:prod
