@@ -25,7 +25,7 @@ yarn build
 
 ### Running the project
 
-To run all apps and packages on the environment, run the following command:
+To run all project containers, run the following command:
 
 ```
 docker compose up --build
