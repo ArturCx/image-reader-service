@@ -1,6 +1,6 @@
 # Image Reader Service
 
-This is a Image Reader Service project using LLM.
+This project use a LLM to read the value displayed on a water meter image.
 
 # Requirements
 
@@ -28,5 +28,5 @@ yarn build
 To run all project containers, run the following command:
 
 ```
-docker compose up --build
+docker compose up
 ```
