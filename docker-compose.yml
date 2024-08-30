@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  postgres:
+    image: bitnami/postgresql:14
+    environment:
+      POSTGRESQL_DATABASE: 'image-reader'
+      POSTGRESQL_USER: 'image-reader-service'
+      POSTGRESQL_PASSWORD: 'user123@'
+      POSTGRESQL_POSTGRES_PASSWORD: 'user123@'
+    ports:
+      - '127.0.0.1:15435:5432'
+    volumes:
+      - ./dbdata:/bitnami/postgresql/data

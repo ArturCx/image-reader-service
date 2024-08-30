@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  code       String    @id @unique
+  created_at DateTime  @default(now())
+  readings   Reading[] // Relacionamento com a tabela de readings
+
+  @@map("customers")
+}
+
+model Reading {
+  id               Int         @id @default(autoincrement())
+  measure_id       String      @unique @default(uuid())
+  customer_code    String
+  measure_datetime DateTime
+  measure_type     MeasureType
+  measure_value    Float
+  confirmed        Boolean     @default(false)
+  confirmed_value  Float?
+  image_url        String?
+  created_at       DateTime    @default(now())
+
+  customer Customer @relation(fields: [customer_code], references: [code])
+
+  @@map("readings")
+}
+
+enum MeasureType {
+  WATER
+  GAS
+}
