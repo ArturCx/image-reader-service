@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -7,7 +6,8 @@ import {
 import { PrismaService } from 'prisma/prisma.service';
 import { IntegrationService } from './integration/integration.service';
 import { CreateReadingDTO } from './dto/create-reading.dto';
-import { UpdateReadingDto } from './dto/update-reading.dto';
+import { UpdateReadingDTO } from './dto/update-reading.dto';
+import { GetReadingDTO } from './dto/get-reading.dto';
 
 @Injectable()
 export class ReadingsService {
@@ -17,17 +17,6 @@ export class ReadingsService {
   ) {}
 
   async uploadImage(data: CreateReadingDTO) {
-    const customer = await this.prisma.customer.findUnique({
-      where: { code: data.customer_code },
-    });
-
-    if (!customer) {
-      throw new BadRequestException({
-        error_code: 'INVALID_DATA',
-        error_description: 'Usuário não encontrado',
-      });
-    }
-
     const firstOfTheMonth = new Date(data.measure_datetime);
     firstOfTheMonth.setDate(1);
     const lastOfTheMonth = new Date(data.measure_datetime);
@@ -36,7 +25,7 @@ export class ReadingsService {
 
     const existingReading = await this.prisma.reading.findFirst({
       where: {
-        customer_code: customer.code,
+        customer_code: data.customer_code,
         measure_type: data.measure_type,
         measure_datetime: {
           gte: firstOfTheMonth,
@@ -63,8 +52,18 @@ export class ReadingsService {
         image_url: imageUrl,
         confirmed: false,
         customer: {
-          connect: {
-            code: data.customer_code,
+          /**
+           * Por não ter sido especificado nos requisitos se o customer
+           * deveria já existir e por não haver endpoint de CRUD de customers,
+           * será criado um novo customer caso não exista ainda.
+           */
+          connectOrCreate: {
+            where: {
+              code: data.customer_code,
+            },
+            create: {
+              code: data.customer_code,
+            },
           },
         },
       },
@@ -77,7 +76,7 @@ export class ReadingsService {
     };
   }
 
-  async confirmReading(data: UpdateReadingDto) {
+  async confirmReading(data: UpdateReadingDTO) {
     const reading = await this.prisma.reading.findUnique({
       where: { id: data.measure_id },
     });
@@ -105,5 +104,38 @@ export class ReadingsService {
     });
 
     return { success: true };
+  }
+
+  async getReadings(data: GetReadingDTO) {
+    const customer = await this.prisma.customer.findUnique({
+      where: {
+        code: data.customer_code,
+      },
+      include: {
+        readings: {
+          where: {
+            measure_type: data.measure_type,
+          },
+        },
+      },
+    });
+
+    if (!customer || customer.readings.length === 0) {
+      throw new NotFoundException({
+        error_code: 'MEASURES_NOT_FOUND',
+        error_description: 'Nenhuma leitura encontrada',
+      });
+    }
+
+    return {
+      customer_code: customer.code,
+      measures: customer.readings.map((reading) => ({
+        measure_uuid: reading.id,
+        measure_datetime: reading.measure_datetime,
+        measure_type: reading.measure_type,
+        has_confirmed: reading.confirmed,
+        image_url: reading.image_url,
+      })),
+    };
   }
 }

@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsNumber, IsUUID } from 'class-validator';
 
-export class UpdateReadingDto {
+export class UpdateReadingDTO {
   @IsNotEmpty()
   @IsUUID()
   measure_id: string;

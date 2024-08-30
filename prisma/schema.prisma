@@ -18,7 +18,7 @@ datasource db {
 model Customer {
   code       String    @id @unique
   created_at DateTime  @default(now())
-  readings   Reading[] // Relacionamento com a tabela de readings
+  readings   Reading[]
 
   @@map("customers")
 }
