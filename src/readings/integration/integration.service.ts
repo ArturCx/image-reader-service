@@ -96,7 +96,7 @@ export class IntegrationService {
           },
         },
         {
-          text: `Read and extract the value displayed on the ${type.toLowerCase()} meter. The meter shows a number composed by 6 digits, being 4 from the integer part and 2 decimals. Please only answer with the value, no additional text.`,
+          text: `Read and extract the value displayed on the ${type.toLowerCase()} meter. You should consider only the first 4 digits displayed on the meter. Please only answer with the value, no additional text.`,
         },
       ]);
 

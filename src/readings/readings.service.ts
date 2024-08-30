@@ -1,7 +1,13 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { IntegrationService } from './integration/integration.service';
-import { MeasureType } from '@prisma/client';
+import { CreateReadingDTO } from './dto/create-reading.dto';
+import { UpdateReadingDto } from './dto/update-reading.dto';
 
 @Injectable()
 export class ReadingsService {
@@ -10,53 +16,55 @@ export class ReadingsService {
     private readonly integrationService: IntegrationService,
   ) {}
 
-  async uploadImage(
-    image: string,
-    customer_code: string,
-    measureDatetime: string,
-    measureType: MeasureType,
-  ) {
+  async uploadImage(data: CreateReadingDTO) {
     const customer = await this.prisma.customer.findUnique({
-      where: { code: customer_code },
+      where: { code: data.customer_code },
     });
 
     if (!customer) {
-      throw new HttpException('Customer not found', HttpStatus.NOT_FOUND);
+      throw new BadRequestException({
+        error_code: 'INVALID_DATA',
+        error_description: 'Usuário não encontrado',
+      });
     }
+
+    const firstOfTheMonth = new Date(data.measure_datetime);
+    firstOfTheMonth.setDate(1);
+    const lastOfTheMonth = new Date(data.measure_datetime);
+    lastOfTheMonth.setMonth(lastOfTheMonth.getMonth() + 1);
+    lastOfTheMonth.setDate(0);
 
     const existingReading = await this.prisma.reading.findFirst({
       where: {
         customer_code: customer.code,
-        measure_type: measureType,
+        measure_type: data.measure_type,
         measure_datetime: {
-          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          gte: firstOfTheMonth,
+          lte: lastOfTheMonth,
         },
       },
     });
 
     if (existingReading) {
-      // throw new HttpException(
-      //   {
-      //     error_code: 'DOUBLE_REPORT',
-      //     error_description: 'Leitura do mês já realizada',
-      //   },
-      //   HttpStatus.CONFLICT,
-      // );
+      throw new ConflictException({
+        error_code: 'DOUBLE_REPORT',
+        error_description: 'Leitura do mês já realizada',
+      });
     }
 
     const { imageUrl, measureValue } =
-      await this.integrationService.processImage(image, measureType);
+      await this.integrationService.processImage(data.image, data.measure_type);
 
     const newReading = await this.prisma.reading.create({
       data: {
-        measure_datetime: new Date(measureDatetime),
-        measure_type: measureType,
+        measure_datetime: data.measure_datetime,
+        measure_type: data.measure_type,
         measure_value: Number(measureValue),
         image_url: imageUrl,
         confirmed: false,
         customer: {
           connect: {
-            code: customer_code,
+            code: data.customer_code,
           },
         },
       },
@@ -65,7 +73,37 @@ export class ReadingsService {
     return {
       image_url: newReading.image_url,
       measure_value: newReading.measure_value,
-      measure_uuid: newReading.measure_id,
+      measure_uuid: newReading.id,
     };
+  }
+
+  async confirmReading(data: UpdateReadingDto) {
+    const reading = await this.prisma.reading.findUnique({
+      where: { id: data.measure_id },
+    });
+
+    if (!reading) {
+      throw new NotFoundException({
+        error_code: 'MEASURE_NOT_FOUND',
+        error_description: 'Leitura não encontrada',
+      });
+    }
+
+    if (reading.confirmed) {
+      throw new ConflictException({
+        error_code: 'CONFIRMATION_DUPLICATE',
+        error_description: 'Leitura já confirmada',
+      });
+    }
+
+    await this.prisma.reading.update({
+      where: { id: data.measure_id },
+      data: {
+        measure_value: data.measure_value,
+        confirmed: true,
+      },
+    });
+
+    return { success: true };
   }
 }
