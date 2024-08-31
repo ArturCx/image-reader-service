@@ -3,10 +3,9 @@ FROM node:18-alpine AS build
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
-RUN yarn install
-
 COPY . .
+
+RUN yarn install
 
 RUN yarn prisma generate
 RUN yarn run build
@@ -16,8 +15,8 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY --from=build /app/package.json ./
-COPY --from=build /app/yarn.lock ./
+COPY --from=build /app ./
+
 RUN yarn install --only=prod
 RUN yarn prisma generate
 

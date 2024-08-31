@@ -12,15 +12,16 @@ services:
       - '127.0.0.1:15435:5432'
     volumes:
       - ./dbdata:/bitnami/postgresql/data
+    healthcheck:
+      test: pg_isready -U image-reader-service
+      interval: 5s
 
   server:
     build: .
-    depends_on:
-      - postgres
+    depends_on: 
+      postgres:
+        condition: service_healthy
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
     environment:
       NODE_ENV: production
