@@ -9,7 +9,7 @@ This project use a LLM to read the value displayed on a water meter image.
 
 ### Start
 
-First of all, run the following command on the terminal to install dependecies and packages:
+First of all, run the following command on the terminal to install dependencies and packages:
 
 ```
 yarn install
